@@ -12,7 +12,7 @@
  */
 
 import { createHash, randomBytes } from 'node:crypto'
-import { lstat, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, open, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 
 const WINDOWS_TRANSIENT_RENAME_ERRORS: ReadonlySet<string> = new Set(['EACCES', 'EBUSY', 'EPERM'])
@@ -71,7 +71,11 @@ export interface WriteFileAtomicOptions {
  * one filesystem. Windows replacement retries transient `EACCES`, `EBUSY`,
  * and `EPERM` failures for a bounded interval while the complete temp file
  * remains the rename source. On any remaining failure the temp file is
- * removed and the failure rethrown. Crash durability (fsync) is out of scope.
+ * removed and the failure rethrown. The temp inode is fsynced before the
+ * rename and the parent directory after it, so a crash between write and
+ * rename cannot commit content that never reached stable storage; the
+ * parent fsync is best-effort (Windows rejects directory fsync), and
+ * preserving owner-only permissions on Windows stays open.
  * @param filename - final path receiving the content.
  * @param content - complete next file content.
  * @param options - permission bits for the replacement inode.
@@ -85,8 +89,31 @@ export async function writeFileAtomic(filename: string, content: string, options
   // and parent directory and preserves owner-only permissions on Windows.
   const temp = `${filename}.${randomBytes(6).toString('hex')}.tmp`
   try {
-    await writeFile(temp, content, { mode: options.mode, flag: 'wx' })
+    // fsync the temp inode before the rename so a crash cannot commit a rename
+    // whose data never reached stable storage, and fsync the parent directory
+    // after it so the rename itself survives one. Windows rejects a directory
+    // fsync, so the parent fsync stays best-effort.
+    // TODO(settings-atomic-durability): On Windows, also preserve owner-only
+    // permissions on the replacement inode.
+    const handle = await open(temp, 'wx', options.mode)
+    try {
+      await handle.writeFile(content)
+      await handle.sync()
+    } finally {
+      await handle.close()
+    }
     await renameAtomicTemp(temp, filename)
+    try {
+      const parent = await open(dirname(filename), 'r')
+      try {
+        await parent.sync()
+      } finally {
+        await parent.close()
+      }
+    } catch {
+      // Directory fsync is unsupported on some platforms and filesystems; the
+      // rename already committed, so its failure only costs crash durability.
+    }
   } catch (error) {
     await rm(temp, { force: true })
     throw error

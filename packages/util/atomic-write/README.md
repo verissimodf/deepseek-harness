@@ -132,6 +132,6 @@ These limits define where the package is not the right tool. They are current pa
 <details>
 <summary>Working context for maintainers — click to expand</summary>
 
-A durability-replacement that `fsync`s the file and parent directory and preserves owner-only permissions on Windows remains open (tracked as `settings-atomic-durability` in source).
+`writeFileAtomic` now `fsync`s the temp file before the rename and the parent directory after it (best-effort on platforms that reject a directory fsync). What remains open under `settings-atomic-durability` is preserving owner-only permissions on the replacement inode on Windows.
 
 </details>

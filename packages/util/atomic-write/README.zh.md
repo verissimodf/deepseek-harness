@@ -132,6 +132,6 @@ Windows 在无法观察到锁时会对 `EPERM` 重试一次，因为持锁方可
 <details>
 <summary>维护者的工作上下文——点击展开</summary>
 
-一种对文件及其父目录执行 `fsync`、并在 Windows 上保留仅属主权限的持久性替换方案仍未实现（在源码中记录为 `settings-atomic-durability`）。
+`writeFileAtomic` 现在会在重命名前对临时文件执行 `fsync`，并在重命名后对其父目录执行 `fsync`（在拒绝目录 `fsync` 的平台上尽力而为）。`settings-atomic-durability` 下仍未实现的是：在 Windows 上保留替换 inode 的仅属主权限。
 
 </details>

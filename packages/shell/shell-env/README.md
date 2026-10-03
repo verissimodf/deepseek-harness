@@ -126,7 +126,7 @@ The managed environment never enters the request prefix, so it does not invalida
 
 These limits define when the registry is a poor fit or needs care. They are current package constraints, not a task backlog.
 
-- **`list()` enumerates plugin-contributed variables only** — registry-owned built-ins (`DSH_HOME`, `DSH_SHELL`, `DSH_SESSION_ID`, `DSH_PROFILE`, `DSH_PROFILE_DIR`) are not included, so diagnostics, prompt, or UI code must not treat `list()` as an exhaustive environment catalog.
+- **`list()` does not reflect execution-dependent values** — it enumerates declarations without running resolvers, so a built-in like `DSH_SESSION_ID` or `DSH_PROFILE` appears even when the matching context is absent and `collect` omits it.
 
 <a id="dev-note"></a>
 ### Dev Note

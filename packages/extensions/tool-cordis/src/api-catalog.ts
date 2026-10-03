@@ -2631,7 +2631,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
       },
       {
         signature: 'list(): BashEnvVariableInfo[]',
-        description: 'Enumerate plugin-contributed variables without executing their resolvers.',
+        description: 'Enumerate the registry-owned built-ins and every plugin-contributed variable, without executing any resolver. Built-ins report the registry\'s own contributor name so diagnostics, prompt, and UI code can treat list as the exhaustive environment catalog.',
         parameters: [],
         returns: 'declarations sorted by environment variable name.',
       },

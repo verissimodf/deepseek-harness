@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { once } from 'node:events'
-import { lstat, mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile } from 'node:fs/promises'
+import { lstat, mkdir, mkdtemp, readFile, readdir, rm, stat, symlink, writeFile, type FileHandle } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -16,12 +16,24 @@ const state = vi.hoisted(() => ({
   releaseLockBeforeProbe: false,
   renameAttempts: 0,
   renameFailures: [] as string[],
+  fsyncs: [] as string[],
 }))
 
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs/promises')>()
   return {
     ...actual,
+    open: (async (path: unknown, flags: unknown, ...rest: never[]) => {
+      const handle = await (actual.open as (...args: unknown[]) => Promise<FileHandle>)(path, flags, ...rest)
+      return {
+        writeFile: handle.writeFile.bind(handle),
+        sync: async () => {
+          state.fsyncs.push(String(path))
+          return handle.sync()
+        },
+        close: handle.close.bind(handle),
+      }
+    }) as typeof actual.open,
     rename: (async (...args: Parameters<typeof actual.rename>) => {
       state.renameAttempts += 1
       const code = state.renameFailures.shift()
@@ -72,6 +84,7 @@ afterEach(async () => {
   state.releaseLockBeforeProbe = false
   state.renameAttempts = 0
   state.renameFailures.length = 0
+  state.fsyncs.length = 0
   await Promise.all(scratchDirs.splice(0).map(dir => rm(dir, {
     force: true,
     maxRetries: 10,
@@ -140,6 +153,14 @@ describe('writeFileAtomic', () => {
     await writeFileAtomic(target, 'new', { mode: 0o600 })
     expect(await readFile(target, 'utf8')).toBe('new')
     if (process.platform !== 'win32') expect((await stat(target)).mode & 0o777).toBe(0o600)
+  })
+
+  it('fsyncs the temp file before the rename and the parent directory after it', async () => {
+    const dir = await scratch()
+    const target = join(dir, 'doc.yaml')
+    await writeFileAtomic(target, 'durable\n', { mode: 0o600 })
+    expect(state.fsyncs).toEqual([expect.stringMatching(/\.tmp$/), dir])
+    expect(await readFile(target, 'utf8')).toBe('durable\n')
   })
 
   it('replaces a symlinked target itself without writing through to the referent', async () => {

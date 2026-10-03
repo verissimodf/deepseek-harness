@@ -302,7 +302,10 @@ register(contributor: BashEnvContributor): () => void
 collect(execution: ToolExecution): DshEnvironment
 
 /**
- * Enumerate plugin-contributed variables without executing their resolvers.
+ * Enumerate the registry-owned built-ins and every plugin-contributed
+ * variable, without executing any resolver. Built-ins report the registry's
+ * own contributor name so diagnostics, prompt, and UI code can treat
+ * {@link list} as the exhaustive environment catalog.
  * @returns declarations sorted by environment variable name.
  */
 list(): BashEnvVariableInfo[]

@@ -108,9 +108,76 @@ describe('ShellEnvRegistry', () => {
         key: 'DSH_ALWAYS_AVAILABLE',
       },
       {
+        contributor: 'shell-env',
+        description: 'DeepSeek Harness home directory for the shell call.',
+        key: 'DSH_HOME',
+      },
+      {
+        contributor: 'shell-env',
+        description: 'Name of the launcher-provided profile this shell call runs in; absent when no profile context exists.',
+        key: 'DSH_PROFILE',
+      },
+      {
+        contributor: 'shell-env',
+        description: 'Directory of the launcher-provided profile; absent when no profile context exists.',
+        key: 'DSH_PROFILE_DIR',
+      },
+      {
+        contributor: 'shell-env',
+        description: 'Session id of the agent that issued the shell call; absent outside an agent session.',
+        key: 'DSH_SESSION_ID',
+      },
+      {
         contributor: 'optional-session-fact',
         description: 'Optional session-scoped test fact.',
         key: 'DSH_SESSION_OPTIONAL',
+      },
+      {
+        contributor: 'shell-env',
+        description: 'Marker that the shell call runs under the harness managed environment.',
+        key: 'DSH_SHELL',
+      },
+    ])
+  })
+
+  it('includes registry-owned built-ins in list() beside contributor declarations', () => {
+    const registry = new ShellEnvRegistry(new Context(), { dshHome: './test-dsh-home' })
+    registry.register({
+      name: 'extra',
+      variables: { DSH_EXTRA: { description: 'Extra fact.' } },
+      resolve: () => ({ DSH_EXTRA: 'x' }),
+    })
+
+    expect(registry.list()).toEqual([
+      {
+        contributor: 'extra',
+        description: 'Extra fact.',
+        key: 'DSH_EXTRA',
+      },
+      {
+        contributor: 'shell-env',
+        description: 'DeepSeek Harness home directory for the shell call.',
+        key: 'DSH_HOME',
+      },
+      {
+        contributor: 'shell-env',
+        description: 'Name of the launcher-provided profile this shell call runs in; absent when no profile context exists.',
+        key: 'DSH_PROFILE',
+      },
+      {
+        contributor: 'shell-env',
+        description: 'Directory of the launcher-provided profile; absent when no profile context exists.',
+        key: 'DSH_PROFILE_DIR',
+      },
+      {
+        contributor: 'shell-env',
+        description: 'Session id of the agent that issued the shell call; absent outside an agent session.',
+        key: 'DSH_SESSION_ID',
+      },
+      {
+        contributor: 'shell-env',
+        description: 'Marker that the shell call runs under the harness managed environment.',
+        key: 'DSH_SHELL',
       },
     ])
   })
@@ -225,6 +292,32 @@ describe('ShellEnvRegistry', () => {
     const ctx = new Context()
     await ctx.plugin(BashEnvPlugin)
     expect(ctx.shellEnv).toBeInstanceOf(ShellEnvRegistry)
-    expect(ctx.shellEnv.list()).toEqual([])
+    expect(ctx.shellEnv.list()).toEqual([
+      {
+        contributor: 'shell-env',
+        description: 'DeepSeek Harness home directory for the shell call.',
+        key: 'DSH_HOME',
+      },
+      {
+        contributor: 'shell-env',
+        description: 'Name of the launcher-provided profile this shell call runs in; absent when no profile context exists.',
+        key: 'DSH_PROFILE',
+      },
+      {
+        contributor: 'shell-env',
+        description: 'Directory of the launcher-provided profile; absent when no profile context exists.',
+        key: 'DSH_PROFILE_DIR',
+      },
+      {
+        contributor: 'shell-env',
+        description: 'Session id of the agent that issued the shell call; absent outside an agent session.',
+        key: 'DSH_SESSION_ID',
+      },
+      {
+        contributor: 'shell-env',
+        description: 'Marker that the shell call runs under the harness managed environment.',
+        key: 'DSH_SHELL',
+      },
+    ])
   })
 })

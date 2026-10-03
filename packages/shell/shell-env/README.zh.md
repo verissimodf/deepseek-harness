@@ -126,7 +126,7 @@ contributor 必须声明它返回的每个键；返回未声明或非字符串�
 
 这些限制说明注册表何时不合适或需要小心使用。它们是当前包约束，不是任务积压。
 
-- **`list()` 只枚举插件贡献的变量**——注册表自有的内置键（`DSH_HOME`、`DSH_SHELL`、`DSH_SESSION_ID`、`DSH_PROFILE`、`DSH_PROFILE_DIR`）不包含在内，因此诊断、提示词或 UI 代码不得把 `list()` 当作完整的环境目录。
+- **`list()` 不反映依赖执行的值**——它枚举声明而不运行 resolver，因此像 `DSH_SESSION_ID` 或 `DSH_PROFILE` 这样的内置键即使在对应上下文缺失、`collect` 因此省略它时也会出现。
 
 <a id="dev-note"></a>
 ### 开发备注

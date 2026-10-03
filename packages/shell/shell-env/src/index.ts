@@ -73,6 +73,8 @@ const DSH_SHELL_KEY = `${DSH_ENV_PREFIX}SHELL` as const
 const DSH_SESSION_ID_KEY = `${DSH_ENV_PREFIX}SESSION_ID` as const
 const DSH_PROFILE_KEY = `${DSH_ENV_PREFIX}PROFILE` as const
 const DSH_PROFILE_DIR_KEY = `${DSH_ENV_PREFIX}PROFILE_DIR` as const
+/** Contributor name reported for the registry-owned built-in variables. */
+const BUILTIN_CONTRIBUTOR = 'shell-env'
 const RESERVED_BASH_ENV_KEYS = new Set<DshEnvironmentKey>([
   DSH_HOME_ENV,
   DSH_SHELL_KEY,
@@ -184,20 +186,50 @@ export class ShellEnvRegistry extends Service {
     return Object.freeze(Object.fromEntries(Object.entries(values).sort(([left], [right]) => left.localeCompare(right))))
   }
 
-  // TODO(bash-env-list-builtins): Include registry-owned built-ins before diagnostics,
-  // prompt, or UI code treats list() as an exhaustive environment catalog.
   /**
-   * Enumerate plugin-contributed variables without executing their resolvers.
+   * Enumerate the registry-owned built-ins and every plugin-contributed
+   * variable, without executing any resolver. Built-ins report the registry's
+   * own contributor name so diagnostics, prompt, and UI code can treat
+   * {@link list} as the exhaustive environment catalog.
    * @returns declarations sorted by environment variable name.
    */
   list(): BashEnvVariableInfo[] {
-    return [...this.contributors.values()]
-      .flatMap(contributor => Object.entries(contributor.variables).map(([key, variable]) => ({
-        contributor: contributor.name,
-        description: variable.description,
-        key: key as DshEnvironmentKey,
-      })))
-      .sort((left, right) => left.key.localeCompare(right.key))
+    const builtins: BashEnvVariableInfo[] = [
+      {
+        contributor: BUILTIN_CONTRIBUTOR,
+        description: 'DeepSeek Harness home directory for the shell call.',
+        key: DSH_HOME_ENV,
+      },
+      {
+        contributor: BUILTIN_CONTRIBUTOR,
+        description: 'Name of the launcher-provided profile this shell call runs in; absent when no profile context exists.',
+        key: DSH_PROFILE_KEY,
+      },
+      {
+        contributor: BUILTIN_CONTRIBUTOR,
+        description: 'Directory of the launcher-provided profile; absent when no profile context exists.',
+        key: DSH_PROFILE_DIR_KEY,
+      },
+      {
+        contributor: BUILTIN_CONTRIBUTOR,
+        description: 'Session id of the agent that issued the shell call; absent outside an agent session.',
+        key: DSH_SESSION_ID_KEY,
+      },
+      {
+        contributor: BUILTIN_CONTRIBUTOR,
+        description: 'Marker that the shell call runs under the harness managed environment.',
+        key: DSH_SHELL_KEY,
+      },
+    ]
+    return [
+      ...builtins,
+      ...[...this.contributors.values()]
+        .flatMap(contributor => Object.entries(contributor.variables).map(([key, variable]) => ({
+          contributor: contributor.name,
+          description: variable.description,
+          key: key as DshEnvironmentKey,
+        }))),
+    ].sort((left, right) => left.key.localeCompare(right.key))
   }
 }
 
